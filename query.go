@@ -116,6 +116,11 @@ func (d *ShardQueryDB) applyUpdates(startingAfter string) {
 			}
 
 			iterator := it.ShardIterator
+			if iterator == nil {
+				// closed shard.
+				return
+			}
+
 			trigger <- fire
 			for {
 				select {
@@ -145,6 +150,10 @@ func (d *ShardQueryDB) applyUpdates(startingAfter string) {
 					log.Printf("component=shard-query fn=update-snapshot at=get-records records=%d behind=%d", len(gr.Records), *gr.MillisBehindLatest)
 
 					iterator = gr.NextShardIterator
+					if iterator == nil {
+						// shard is now closed
+						return
+					}
 
 					if r := len(gr.Records); r > 0 {
 						err = d.db.Update(func(tx *bolt.Tx) error {
